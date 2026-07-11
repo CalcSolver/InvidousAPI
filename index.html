@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invidious Video Extractor</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background-color: #121212; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .container { max-width: 700px; width: 100%; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        h1 { text-align: center; margin-bottom: 20px; color: #00adb5; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 2px solid #333; border-radius: 6px; background: #2b2b2b; color: #fff; font-size: 16px; outline: none; }
+        input:focus { border-color: #00adb5; }
+        button { padding: 12px 24px; background: #00adb5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #007a80; }
+        .actions { display: none; margin-top: 20px; text-align: center; }
+        .download-btn { display: inline-block; padding: 10px 20px; background: #28a745; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-bottom: 15px; }
+        video { width: 100%; border-radius: 8px; background: #000; display: none; margin-top: 15px; }
+        .status { text-align: center; color: #aaa; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Invidious Stream Extractor</h1>
+    <div class="input-group">
+        <input type="text" id="videoUrl" placeholder="Paste YouTube link...">
+        <button onclick="fetchVideoFile()">Extract File</button>
+    </div>
+
+    <div class="status" id="statusText"></div>
+
+    <div class="actions" id="actionArea">
+        <a id="downloadLink" class="download-btn" href="#" target="_blank" download="video.mp4">Download MP4 File</a>
+        <video id="nativePlayer" controls></video>
+    </div>
+</div>
+
+<script>
+    function extractVideoId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    async function fetchVideoFile() {
+        const urlInput = document.getElementById('videoUrl').value;
+        const videoId = extractVideoId(urlInput);
+        const statusText = document.getElementById('statusText');
+        const actionArea = document.getElementById('actionArea');
+        const downloadLink = document.getElementById('downloadLink');
+        const player = document.getElementById('nativePlayer');
+
+        if (!videoId) {
+            alert('Please enter a valid YouTube link.');
+            return;
+        }
+
+        statusText.innerText = "Fetching stream details from Invidious...";
+        actionArea.style.display = 'none';
+        player.style.display = 'none';
+
+        // Using a public Invidious instance API (Note: public instances change, you can swap this URL if needed)
+        const invidiousInstance = "https://invidious.nerdvpn.de"; 
+        
+        try {
+            const response = await fetch(`${invidiousInstance}/api/v1/videos/${videoId}`);
+            const data = await response.json();
+
+            // Filter out the video formats that have audio and video combined (usually 360p or 720p in MP4 format)
+            const videoStream = data.formatStreams.find(stream => stream.container === "mp4") || data.formatStreams[0];
+
+            if (videoStream && videoStream.url) {
+                statusText.innerText = `Success! Found: ${data.title}`;
+                
+                // Set up the download button and native player source
+                downloadLink.href = videoStream.url;
+                player.src = videoStream.url;
+
+                actionArea.style.display = 'block';
+                player.style.display = 'block';
+            } else {
+                statusText.innerText = "Could not parse a direct MP4 stream for this video.";
+            }
+        } catch (error) {
+            console.error(error);
+            statusText.innerText = "Error fetching data. The public Invidious instance might be rate-limited or down. Try again later.";
+        }
+    }
+</script>
+
+</body>
+</html>
