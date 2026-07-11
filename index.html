@@ -2,76 +2,91 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Legacy iPad Streamer</title>
+    <title>iPad Invidious Streamer</title>
     <style>
         body {
-            background-color: #111;
-            color: #fff;
-            font-family: Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: -apple-system, Helvetica, Arial, sans-serif;
             text-align: center;
             padding: 20px;
         }
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
-            background: #222;
-            padding: 20px;
-            border-radius: 8px;
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
         h1 {
-            color: #ff4757;
+            color: #f1c40f;
             font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 20px;
         }
         input {
-            width: 80%;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid #444;
-            background: #333;
+            width: 85%;
+            padding: 14px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 2px solid #333;
+            background: #2b2b2b;
             color: #fff;
             font-size: 16px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #f1c40f;
         }
         button {
-            padding: 12px 24px;
-            background: #ff4757;
-            color: white;
+            padding: 12px 28px;
+            background: #f1c40f;
+            color: #111;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             font-weight: bold;
             font-size: 16px;
             cursor: pointer;
         }
-        .player-container {
-            margin-top: 20px;
+        button:hover {
+            background: #d4ac0d;
+        }
+        .player-frame {
+            margin-top: 25px;
             display: none;
-        }
-        /* Uses standard dimensions perfect for older mobile Safari engines */
-        iframe {
-            width: 100%;
-            height: 360px;
-            border: none;
+            position: relative;
+            padding-bottom: 56.25%; /* Perfect 16:9 ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
             background: #000;
-            border-radius: 4px;
         }
-        .status {
-            margin: 10px 0;
-            color: #aaa;
-            font-size: 14px;
+        .player-frame iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Legacy iPad Video Player</h1>
-    <p class="status">Bypasses app constraints for older iOS versions.</p>
+    <h1>Legacy Hub</h1>
+    <p class="subtitle">Custom structural pipeline utilizing unblocked Invidious mirrors.</p>
     
     <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
     <br>
-    <button onclick="loadLegacyStream()">Load Video</button>
+    <button onclick="streamViaInvidious()">Launch Video</button>
 
-    <div class="player-container" id="playerContainer">
+    <div class="player-frame" id="playerWrapper">
         </div>
 </div>
 
@@ -82,23 +97,26 @@
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function loadLegacyStream() {
+    function streamViaInvidious() {
         var urlInput = document.getElementById('videoUrl').value.trim();
         var videoId = extractVideoId(urlInput);
-        var container = document.getElementById('playerContainer');
+        var wrapper = document.getElementById('playerWrapper');
 
         if (!videoId) {
-            alert('Please enter a valid YouTube link.');
+            alert('Please check your link and try again.');
             return;
         }
 
-        // We use a privacy-respecting, lightweight embed instance.
-        // This strips away all modern heavy scripts that crash old Safari engines.
-        var embedUrl = "https://youtube.com/embed/" + videoId + "?autoplay=1&playsinline=1";
+        // We target a highly stable public Invidious instance node
+        var activeInstance = "https://inv.tux.digital";
 
-        // Injecting the player explicitly via clean innerHTML string parsing
-        container.innerHTML = '<iframe src="' + embedUrl + '" allowfullscreen defer></iframe>';
-        container.style.display = 'block';
+        // Building a clean, legacy-ready tracking-free embed string
+        // &local=true forces the instance to proxy the media so your iPad can read it
+        var targetEmbed = activeInstance + "/embed/" + videoId + "?autoplay=1&local=true&player_style=youtube";
+
+        // Render the window
+        wrapper.innerHTML = '<iframe src="' + targetEmbed + '" allowfullscreen></iframe>';
+        wrapper.style.display = 'block';
     }
 </script>
 
