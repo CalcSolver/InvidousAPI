@@ -2,131 +2,113 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>iPad Legacy Video Engine</title>
+    <title>iPad Legacy Video Portal</title>
     <style>
         body {
             background-color: #0c0d10;
             color: #ffffff;
             font-family: -apple-system, Helvetica, Arial, sans-serif;
             text-align: center;
-            padding: 15px;
+            padding: 20px;
             margin: 0;
         }
         .container {
-            max-width: 600px;
-            margin: 10px auto;
+            max-width: 550px;
+            margin: 30px auto;
             background: #171921;
-            padding: 20px;
+            padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.6);
             border: 1px solid #252836;
         }
         h1 {
             color: #f1c40f;
-            font-size: 22px;
+            font-size: 24px;
             margin-bottom: 5px;
         }
-        .node-tag {
+        .tagline {
+            color: #a4a9be;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .node-status {
             background: #252836;
             color: #00ff88;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
             display: inline-block;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             font-family: monospace;
         }
         input {
             width: 90%;
-            padding: 12px;
-            margin-bottom: 12px;
+            padding: 14px;
+            margin-bottom: 15px;
             border-radius: 6px;
             border: 2px solid #252836;
             background: #1f222f;
             color: #fff;
             font-size: 16px;
+            outline: none;
         }
-        .btn-group {
-            margin-bottom: 15px;
+        .btn-panel {
+            margin-top: 10px;
         }
-        button {
-            padding: 12px 20px;
+        .action-btn {
+            display: inline-block;
+            padding: 14px 24px;
             margin: 5px;
             border: none;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 16px;
             cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
         }
-        .btn-play { background: #f1c40f; color: #111; }
-        .btn-skip { background: #e74c3c; color: #fff; }
-        
-        .player-frame {
-            margin-top: 15px;
-            display: none;
-            position: relative;
-            padding-bottom: 56.25%; /* Fixed 16:9 ratio */
-            height: 0;
-            overflow: hidden;
-            border-radius: 8px;
-            background: #000;
-            border: 1px solid #252836;
+        .btn-launch { 
+            background: #f1c40f; 
+            color: #111; 
         }
-        .player-frame iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
+        .btn-rotate { 
+            background: #34495e; 
+            color: #fff; 
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>iPad Video Pipeline</h1>
-    <div class="node-tag" id="nodeDisplay">Active Hub: inv.nadeko.net</div>
+    <h1>iPad Video Launcher</h1>
+    <p class="tagline">Bypasses frame restrictions to play YouTube videos on older iOS devices.</p>
+    
+    <div class="node-status" id="nodeLabel">Server Channel: yewtu.be</div>
     
     <br>
     <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
     
-    <div class="btn-group">
-        <button class="btn-play" onclick="launchVideoStream()">Launch Video</button>
-        <button class="btn-skip" onclick="rotateServerNode()">Skip Broken Server</button>
+    <div class="btn-panel">
+        <a id="launchLink" class="action-btn btn-launch" href="#" target="_blank" onclick="return validateAndBuildUrl()">Launch Video Player</a>
+        <button class="action-btn btn-rotate" onclick="changeServer()">Cycle Server Route</button>
     </div>
-
-    <div class="player-frame" id="playerWrapper">
-        </div>
 </div>
 
 <script>
-    // Global tracking array consisting of resilient open cleared nodes
-    var serverNodes = [
+    // Public instances curated specifically for legacy compatibility
+    var proxyNodes = [
+        "https://yewtu.be",
         "https://inv.nadeko.net",
         "https://invidious.nerdvpn.de",
-        "https://yewtu.be",
-        "https://invidious.flokinet.to",
-        "https://inv.tux.digital" // Kept as last fallback option
+        "https://invidious.flokinet.to"
     ];
     
-    var activeIndex = 0;
+    var currentRouteIndex = 0;
 
-    function updateNodeLabel() {
-        var cleanName = serverNodes[activeIndex].replace("https://", "");
-        document.getElementById("nodeDisplay").innerText = "Active Hub: " + cleanName;
-    }
-
-    function rotateServerNode() {
-        // Step directly to the next index in the tracking matrix
-        activeIndex = (activeIndex + 1) % serverNodes.length;
-        updateNodeLabel();
-        
-        // If a video was already attempting to play, hot-reload it instantly onto the new server node
-        var urlInput = document.getElementById('videoUrl').value.trim();
-        if (urlInput) {
-            launchVideoStream();
-        }
+    function changeServer() {
+        currentRouteIndex = (currentRouteIndex + 1) % proxyNodes.length;
+        var displayUrl = proxyNodes[currentRouteIndex].replace("https://", "");
+        document.getElementById("nodeLabel").innerText = "Server Channel: " + displayUrl;
     }
 
     function extractVideoId(url) {
@@ -135,24 +117,25 @@
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function launchVideoStream() {
-        var urlInput = document.getElementById('videoUrl').value.trim();
-        var videoId = extractVideoId(urlInput);
-        var wrapper = document.getElementById('playerWrapper');
+    function validateAndBuildUrl() {
+        var inputVal = document.getElementById("videoUrl").value.trim();
+        var id = extractVideoId(inputVal);
+        var launchLink = document.getElementById("launchLink");
 
-        if (!videoId) {
-            alert('Please check your link layout format.');
-            return;
+        if (!id) {
+            alert("Please input a valid YouTube link format.");
+            return false; // Blocks the link from opening an empty window
         }
 
-        var currentServer = serverNodes[activeIndex];
+        var selectedBase = proxyNodes[currentRouteIndex];
         
-        // Structural generation parameters optimized specifically for old Safari rendering 
-        // local=true acts as a bypass forcing the selected server instance to process media tracks natively
-        var targetEmbedUrl = currentServer + "/embed/" + videoId + "?autoplay=1&local=true&player_style=youtube&playsinline=1";
-
-        wrapper.innerHTML = '<iframe src="' + targetEmbedUrl + '" allowfullscreen></iframe>';
-        wrapper.style.display = 'block';
+        // We open the native watch page directly. 
+        // &local=true proxies the video stream so the older iPad engine doesn't talk to Google servers.
+        // &preferences=... turns off modern web UI layers to prevent older Safari engines from lagging.
+        var absoluteWatchUrl = selectedBase + "/watch?v=" + id + "&local=true&dark_mode=true&player_style=youtube";
+        
+        launchLink.href = absoluteWatchUrl;
+        return true; // Allows standard link execution to open a fresh tab
     }
 </script>
 
