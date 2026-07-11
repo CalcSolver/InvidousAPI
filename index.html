@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream & Watch Hub (Multi-Node Edition)</title>
+    <title>Resilient Stream & Watch Hub</title>
     <style>
         * {
             box-sizing: border-box;
@@ -83,35 +83,54 @@
             min-height: 20px;
         }
 
-        .actions {
+        .player-box {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            overflow: hidden;
+            background: #000;
+            border-radius: 8px;
+            display: none;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .player-box iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .download-zone {
             display: none;
             margin-top: 20px;
             text-align: center;
+            padding: 15px;
+            background: #2b2b2b;
+            border-radius: 8px;
         }
 
-        .download-btn {
+        .btn-action {
             display: inline-block;
             padding: 12px 24px;
-            background: #2ed573;
             color: white;
             text-decoration: none;
             border-radius: 6px;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin: 5px;
             transition: background 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
         }
 
-        .download-btn:hover {
-            background: #26af5f;
-        }
-
-        video {
-            width: 100%;
-            border-radius: 8px;
-            background: #000;
-            display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
+        .btn-success { background: #2ed573; }
+        .btn-success:hover { background: #26af5f; }
+        .btn-warning { background: #ffa502; color: #121212; }
+        .btn-warning:hover { background: #e09000; }
 
         .info-box {
             margin-top: 25px;
@@ -131,104 +150,81 @@
     <h1>Stream & Watch Hub</h1>
     
     <div class="input-group">
-        <input type="text" id="videoUrl" placeholder="Paste YouTube video link here...">
-        <button onclick="startExtraction()">Extract File</button>
+        <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
+        <button onclick="processMedia()">Load Media</button>
     </div>
 
     <div class="status" id="statusText"></div>
 
-    <div class="actions" id="actionArea">
-        <a id="downloadLink" class="download-btn" href="#" target="_blank">Download MP4 File</a>
-        <video id="nativePlayer" controls></video>
+    <div class="player-box" id="playerContainer"></div>
+
+    <div class="download-zone" id="downloadZone">
+        <a id="directDownload" class="btn-action btn-success" href="#" target="_blank" style="display:none;">Download Direct MP4</a>
+        <a id="fallbackDownload" class="btn-action btn-warning" href="#" target="_blank">External File Mirror</a>
     </div>
 
     <div class="info-box">
-        <strong>Multi-Node Rotation Enabled:</strong> If an extraction fails, this application automatically rotates across multiple Cobalt API mirrors to find an online, unblocked server.
+        <strong>Anti-Block System:</strong> Embedded streaming triggers immediately so you can watch instantly without limits. File downloads attempt a clean route first, with an active fallback generator ready if host nodes decline the Vercel request.
     </div>
 </div>
 
 <script>
-    // A pool of active community Cobalt mirrors to guarantee high uptime
-    const cobaltNodes = [
-        "https://api.cobalt.tools",
-        "https://cobalt.api.unblock.casa",
-        "https://cobalt-api.l99.lol",
-        "https://api.cobalt.vip"
-    ];
+    function extractVideoId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
 
-    async function startExtraction() {
+    async function processMedia() {
         const urlInput = document.getElementById('videoUrl').value.trim();
+        const videoId = extractVideoId(urlInput);
         const statusText = document.getElementById('statusText');
-        const actionArea = document.getElementById('actionArea');
-        const player = document.getElementById('nativePlayer');
+        const playerContainer = document.getElementById('playerContainer');
+        const downloadZone = document.getElementById('downloadZone');
+        const directBtn = document.getElementById('directDownload');
+        const fallbackBtn = document.getElementById('fallbackDownload');
 
-        if (!urlInput) {
-            alert('Please enter a valid link.');
+        if (!videoId) {
+            alert('Please enter a valid YouTube video URL.');
             return;
         }
 
-        actionArea.style.display = 'none';
-        player.style.display = 'none';
-        player.src = "";
-
-        // Attempt each mirror sequentially until one succeeds
-        for (let i = 0; i < cobaltNodes.length; i++) {
-            const baseUrl = cobaltNodes[i];
-            const cleanName = baseUrl.replace('https://', '');
-            statusText.innerText = `Trying extraction node [${i + 1}/${cobaltNodes.length}]: ${cleanName}...`;
-
-            const success = await tryNodeExtraction(baseUrl, urlInput);
-            if (success) return; // Exit loop if successful
-        }
-
-        statusText.innerText = "All active API streams are currently blocked or rate-limited. Please try again in a few minutes.";
-    }
-
-    async function tryNodeExtraction(nodeUrl, videoUrl) {
-        const statusText = document.getElementById('statusText');
-        const actionArea = document.getElementById('actionArea');
-        const downloadLink = document.getElementById('downloadLink');
-        const player = document.getElementById('nativePlayer');
-
+        // 1. Launch Watch Module Instantly
+        statusText.innerText = "Loading video player...";
+        playerContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        playerContainer.style.display = 'block';
+        
+        // Setup options area
+        downloadZone.style.display = 'block';
+        directBtn.style.display = 'none';
+        fallbackBtn.href = `https://cobalt.tools/?url=${encodeURIComponent(urlInput)}`;
+        
+        // 2. Background task to look for an open API download link
+        statusText.innerText = "Player ready! Attempting file extraction link...";
+        
         try {
-            // Note: Older versions used '/api/json', newer setups use the root endpoint '/'
-            const response = await fetch(`${nodeUrl}/`, {
+            const response = await fetch('https://api.cobalt.tools/', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    url: videoUrl,
-                    videoQuality: '720', 
-                    downloadMode: 'auto'
-                })
+                body: JSON.stringify({ url: urlInput, videoQuality: '720', downloadMode: 'auto' })
             });
 
-            if (!response.ok) return false;
-
-            const data = await response.json();
-
-            if (data.status === 'redirect' || data.status === 'stream') {
-                statusText.innerText = "Success! Source file extracted successfully.";
-                downloadLink.href = data.url;
-                player.src = data.url;
-                actionArea.style.display = 'block';
-                player.style.display = 'block';
-                return true;
-            } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
-                statusText.innerText = "Success! Loaded best video configurations.";
-                downloadLink.href = data.picker[0].url;
-                player.src = data.picker[0].url;
-                actionArea.style.display = 'block';
-                player.style.display = 'block';
-                return true;
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'redirect' || data.status === 'stream') {
+                    directBtn.href = data.url;
+                    directBtn.style.display = 'inline-block';
+                    statusText.innerText = "Player active & direct download generated successfully!";
+                    return;
+                }
             }
-            
-            return false;
+            throw new Error("Node restricted connection");
         } catch (error) {
-            console.error(`Node ${nodeUrl} failed connection.`);
-            return false;
+            console.log("Direct API connection dropped or rate-limited. Relying on fallback portal.");
+            statusText.innerText = "Player active. (Direct file pipeline restricted, use External File Mirror below)";
         }
     }
 </script>
