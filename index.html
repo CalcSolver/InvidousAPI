@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream & Watch Hub (Cobalt Edition)</title>
+    <title>Stream & Watch Hub (Multi-Node Edition)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -132,7 +132,7 @@
     
     <div class="input-group">
         <input type="text" id="videoUrl" placeholder="Paste YouTube video link here...">
-        <button onclick="fetchVideoFile()">Extract File</button>
+        <button onclick="startExtraction()">Extract File</button>
     </div>
 
     <div class="status" id="statusText"></div>
@@ -143,16 +143,23 @@
     </div>
 
     <div class="info-box">
-        <strong>Cobalt API Engine:</strong> This template uses a modern media processing engine. Instead of web scraping, it formats and generates direct, high-speed streaming links directly inside your HTML video sandbox.
+        <strong>Multi-Node Rotation Enabled:</strong> If an extraction fails, this application automatically rotates across multiple Cobalt API mirrors to find an online, unblocked server.
     </div>
 </div>
 
 <script>
-    async function fetchVideoFile() {
+    // A pool of active community Cobalt mirrors to guarantee high uptime
+    const cobaltNodes = [
+        "https://api.cobalt.tools",
+        "https://cobalt.api.unblock.casa",
+        "https://cobalt-api.l99.lol",
+        "https://api.cobalt.vip"
+    ];
+
+    async function startExtraction() {
         const urlInput = document.getElementById('videoUrl').value.trim();
         const statusText = document.getElementById('statusText');
         const actionArea = document.getElementById('actionArea');
-        const downloadLink = document.getElementById('downloadLink');
         const player = document.getElementById('nativePlayer');
 
         if (!urlInput) {
@@ -160,55 +167,68 @@
             return;
         }
 
-        statusText.innerText = "Processing video streams via Cobalt Engine...";
         actionArea.style.display = 'none';
         player.style.display = 'none';
         player.src = "";
 
+        // Attempt each mirror sequentially until one succeeds
+        for (let i = 0; i < cobaltNodes.length; i++) {
+            const baseUrl = cobaltNodes[i];
+            const cleanName = baseUrl.replace('https://', '');
+            statusText.innerText = `Trying extraction node [${i + 1}/${cobaltNodes.length}]: ${cleanName}...`;
+
+            const success = await tryNodeExtraction(baseUrl, urlInput);
+            if (success) return; // Exit loop if successful
+        }
+
+        statusText.innerText = "All active API streams are currently blocked or rate-limited. Please try again in a few minutes.";
+    }
+
+    async function tryNodeExtraction(nodeUrl, videoUrl) {
+        const statusText = document.getElementById('statusText');
+        const actionArea = document.getElementById('actionArea');
+        const downloadLink = document.getElementById('downloadLink');
+        const player = document.getElementById('nativePlayer');
+
         try {
-            // Reaching out to a primary community Cobalt instance API
-            const response = await fetch('https://api.cobalt.tools/', {
+            // Note: Older versions used '/api/json', newer setups use the root endpoint '/'
+            const response = await fetch(`${nodeUrl}/`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    url: urlInput,
-                    videoQuality: '720', // Optimizes for progressive 720p audio + video unified file
-                    downloadMode: 'auto',
-                    filenameStyle: 'basic'
+                    url: videoUrl,
+                    videoQuality: '720', 
+                    downloadMode: 'auto'
                 })
             });
 
+            if (!response.ok) return false;
+
             const data = await response.json();
 
-            // Handle direct stream/redirect URLs
             if (data.status === 'redirect' || data.status === 'stream') {
-                statusText.innerText = "Success! Video source file extracted successfully.";
-                
+                statusText.innerText = "Success! Source file extracted successfully.";
                 downloadLink.href = data.url;
                 player.src = data.url;
-
                 actionArea.style.display = 'block';
                 player.style.display = 'block';
-            } 
-            // Handle lists/pickers (e.g., playlists, shorts lists, or multi-option queries)
-            else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
-                statusText.innerText = "Success! Resolved best matching media configuration.";
-                
+                return true;
+            } else if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+                statusText.innerText = "Success! Loaded best video configurations.";
                 downloadLink.href = data.picker[0].url;
                 player.src = data.picker[0].url;
-
                 actionArea.style.display = 'block';
                 player.style.display = 'block';
-            } 
-            else {
-                statusText.innerText = `Extraction failed: ${data.text || 'Unknown engine error.'}`;
+                return true;
             }
+            
+            return false;
         } catch (error) {
-            console.error("API error:", error);
-            statusText.innerText = "The pipeline API timed out or refused connection. Try another link, or attempt again shortly.";
+            console.error(`Node ${nodeUrl} failed connection.`);
+            return false;
         }
     }
 </script>
