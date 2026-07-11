@@ -3,154 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Native Stream & Watch Hub</title>
+    <title>Native Stream Engine</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #121212;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            width: 100%;
-            background: #1e1e1e;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 24px;
-            color: #38ef7d;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #333;
-            border-radius: 6px;
-            background: #2b2b2b;
-            color: #fff;
-            font-size: 16px;
-            outline: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #38ef7d;
-        }
-
-        button {
-            padding: 12px 24px;
-            background: #38ef7d;
-            color: #121212;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background: #11998e;
-            color: white;
-        }
-
-        .status {
-            text-align: center;
-            color: #aaa;
-            margin-top: 10px;
-            font-size: 14px;
-            min-height: 20px;
-        }
-
-        .media-zone {
-            display: none;
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        /* Pure HTML5 Native Player styling */
-        video {
-            width: 100%;
-            border-radius: 8px;
-            background: #000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            margin-bottom: 20px;
-        }
-
-        .download-btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-
-        .download-btn:hover {
-            background: #0056b3;
-        }
-
-        .info-box {
-            margin-top: 25px;
-            padding: 15px;
-            background: #2b2b2b;
-            border-left: 4px solid #38ef7d;
-            border-radius: 4px;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #ccc;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: #0d0e12; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .container { max-width: 750px; width: 100%; background: #16171e; padding: 30px; border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.6); border: 1px solid #232530; }
+        h1 { text-align: center; margin-bottom: 24px; color: #ff4757; font-weight: 700; }
+        .input-group { display: flex; gap: 12px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 14px; border: 2px solid #2d303f; border-radius: 8px; background: #1f212a; color: #fff; font-size: 16px; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: #ff4757; }
+        button { padding: 14px 28px; background: #ff4757; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .status { text-align: center; color: #a4a9be; margin-bottom: 15px; font-size: 14px; min-height: 20px; }
+        .media-zone { display: none; margin-top: 10px; text-align: center; }
+        video { width: 100%; max-height: 420px; border-radius: 12px; background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        .download-btn { display: inline-block; padding: 12px 24px; background: #2ed573; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; transition: background 0.2s; }
+        .download-btn:hover { background: #26af5f; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Native Stream Hub</h1>
-    
+    <h1>Serverless Stream Hub</h1>
     <div class="input-group">
         <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
-        <button onclick="streamNativeVideo()">Stream Video</button>
+        <button onclick="requestServerlessStream()">Stream Video</button>
     </div>
 
-    <div class="status" id="statusText"></div>
+    <div class="status" id="statusText">Ready to extract clean stream files.</div>
 
     <div class="media-zone" id="mediaZone">
         <video id="nativePlayer" controls crossorigin="anonymous"></video>
         <br>
         <a id="downloadLink" class="download-btn" href="#" target="_blank" download="video.mp4">Save Video File (.mp4)</a>
     </div>
-
-    <div class="info-box">
-        <strong>100% Iframe-Free:</strong> This version extracts the raw multimedia source configuration array and passes it directly into a standard browser HTML5 component.
-    </div>
 </div>
 
 <script>
-    async function streamNativeVideo() {
+    async function requestServerlessStream() {
         const urlInput = document.getElementById('videoUrl').value.trim();
         const statusText = document.getElementById('statusText');
         const mediaZone = document.getElementById('mediaZone');
@@ -162,53 +52,32 @@
             return;
         }
 
-        statusText.innerText = "Extracting raw video file stream...";
+        statusText.innerText = "Routing request through Vercel Serverless Function...";
         mediaZone.style.display = "none";
         player.src = "";
 
-        // Using a public proxy pipeline designed to bypass CORS browser restrictions
-        const proxyUrl = "https://api.allorigins.win/get?url=";
-        const cobaltApi = "https://api.cobalt.tools/";
-
         try {
-            // Request the download links using a proxy wrapper to disguise Vercel's headers
-            const targetReq = await fetch(cobaltApi, {
+            // Fetch dynamically from your own backend API relative route
+            const response = await fetch('/api/stream', {
                 method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    url: urlInput,
-                    videoQuality: '720',
-                    downloadMode: 'auto'
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: urlInput })
             });
 
-            const data = await targetReq.json();
+            const data = await response.json();
 
-            if (data.status === 'redirect' || data.status === 'stream') {
-                statusText.innerText = "Success! Source stream verified.";
-                
-                // Set the extracted MP4 url directly to the video element and download button
+            if (response.ok && data.url) {
+                statusText.innerText = "Success! Source stream extracted cleanly.";
                 player.src = data.url;
                 downloadLink.href = data.url;
-
                 mediaZone.style.display = "block";
-            } else if (data.status === 'picker' && data.picker.length > 0) {
-                statusText.innerText = "Success! Loaded media configurations.";
-                
-                player.src = data.picker[0].url;
-                downloadLink.href = data.picker[0].url;
-
-                mediaZone.style.display = "block";
+                player.load();
             } else {
-                statusText.innerText = "The media file could not be parsed natively on this node. Try clicking stream again.";
+                statusText.innerText = data.error || "Failed to process link on the serverless cluster.";
             }
-
         } catch (error) {
             console.error(error);
-            statusText.innerText = "Connection blocked. Public node servers are refusing direct browser parsing. Try again in a minute.";
+            statusText.innerText = "Internal gateway error. Ensure this project is running live on Vercel deployment infrastructure.";
         }
     }
 </script>
