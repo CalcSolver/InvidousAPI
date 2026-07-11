@@ -3,37 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invidious Direct Streamer</title>
+    <title>Piped Stream Hub</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #111; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .container { max-width: 700px; width: 100%; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center; }
-        h1 { margin-bottom: 20px; color: #f1c40f; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border: 2px solid #333; border-radius: 6px; background: #2b2b2b; color: #fff; font-size: 16px; outline: none; }
-        input:focus { border-color: #f1c40f; }
-        button { padding: 12px 24px; background: #f1c40f; color: #111; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        button:hover { background: #d4ac0d; }
-        video { width: 100%; border-radius: 8px; background: #000; display: none; margin-top: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-        .btn-download { display: none; margin-top: 15px; padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; }
-        .btn-download:hover { background: #219653; }
-        .status { margin-top: 10px; color: #aaa; font-size: 14px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: #0f1015; color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .container { max-width: 750px; width: 100%; background: #1a1c23; padding: 30px; border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); border: 1px solid #2b2e3c; text-align: center; }
+        h1 { margin-bottom: 24px; color: #6c5ce7; font-weight: 700; }
+        .input-group { display: flex; gap: 12px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 14px; border: 2px solid #2b2e3c; border-radius: 8px; background: #20222b; color: #fff; font-size: 16px; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: #6c5ce7; }
+        button { padding: 14px 28px; background: #6c5ce7; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #5b4cc4; }
+        .status { color: #a4a9be; margin-bottom: 15px; font-size: 14px; min-height: 20px; }
+        .media-zone { display: none; margin-top: 10px; }
+        video { width: 100%; max-height: 420px; border-radius: 12px; background: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        .download-btn { display: inline-block; padding: 12px 24px; background: #00b894; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; transition: background 0.2s; }
+        .download-btn:hover { background: #00a884; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Native Invidious Streamer</h1>
+    <h1>Piped Native Streamer</h1>
     <div class="input-group">
-        <input type="text" id="videoUrl" placeholder="Paste YouTube link...">
-        <button onclick="loadInvidiousStream()">Stream Native</button>
+        <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
+        <button onclick="fetchPipedStream()">Load Video</button>
     </div>
 
-    <div class="status" id="statusText">No iframe. Direct video mapping.</div>
+    <div class="status" id="statusText">Ready to parse unblocked native streams.</div>
 
-    <video id="nativePlayer" controls crossorigin="anonymous"></video>
-    <br>
-    <a id="downloadLink" class="btn-download" href="#" target="_blank" download="video.mp4">Download MP4</a>
+    <div class="media-zone" id="mediaZone">
+        <video id="nativePlayer" controls crossorigin="anonymous"></video>
+        <br>
+        <a id="downloadLink" class="download-btn" href="#" target="_blank" download="video.mp4">Save Video File (.mp4)</a>
+    </div>
 </div>
 
 <script>
@@ -43,36 +46,57 @@
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function loadInvidiousStream() {
+    async function fetchPipedStream() {
         const urlInput = document.getElementById('videoUrl').value.trim();
         const videoId = extractVideoId(urlInput);
+        const statusText = document.getElementById('statusText');
+        const mediaZone = document.getElementById('mediaZone');
         const player = document.getElementById('nativePlayer');
         const downloadLink = document.getElementById('downloadLink');
-        const statusText = document.getElementById('statusText');
 
         if (!videoId) {
-            alert('Please enter a valid YouTube link.');
+            alert('Please enter a valid YouTube video link.');
             return;
         }
 
-        // We use a known public instance that supports direct video playback proxying
-        const instance = "https://inv.tux.digital"; 
+        statusText.innerText = "Extracting video data from unblocked stream engines...";
+        mediaZone.style.display = "none";
+        player.src = "";
 
-        // This is the direct internal URL structure Invidious uses to stream raw video files
-        // it requires the video ID and the YouTube format code (itag 22 or 18 are standard mp4)
-        const directStreamUrl = `${instance}/latest_version?id=${videoId}&itag=22#title=video.mp4`;
+        // List of public Piped API cluster nodes
+        const pipedInstances = [
+            "https://pipedapi.kavin.rocks",
+            "https://pipedapi.moomoo.me",
+            "https://api.piped.privacydev.net"
+        ];
 
-        statusText.innerText = "Connecting directly to video file stream...";
+        for (const apiNode of pipedInstances) {
+            try {
+                const response = await fetch(`${apiNode}/streams/${videoId}`);
+                if (!response.ok) continue;
 
-        // Attach the URL to the native player and download link
-        player.src = directStreamUrl;
-        downloadLink.href = directStreamUrl;
+                const data = await response.json();
+                
+                // Piped separates combined streams cleanly. Let's find the high-quality unified MP4 file track
+                const videoStream = data.videoStreams.find(s => s.videoOnly === false && s.format === "MPEG_4") 
+                                 || data.videoStreams.find(s => s.videoOnly === false);
 
-        // Display the elements
-        player.style.display = "block";
-        downloadLink.style.display = "inline-block";
-        
-        player.load();
+                if (videoStream && videoStream.url) {
+                    statusText.innerText = "Success! Playing raw stream without iframes.";
+                    
+                    player.src = videoStream.url;
+                    downloadLink.href = videoStream.url;
+                    
+                    mediaZone.style.display = "block";
+                    player.load();
+                    return; // Success, exit execution loop
+                }
+            } catch (err) {
+                console.warn(`Node ${apiNode} failed stream request.`);
+            }
+        }
+
+        statusText.innerText = "All active web pipes are rejected by YouTube's network blocks. Try again in a few moments.";
     }
 </script>
 
