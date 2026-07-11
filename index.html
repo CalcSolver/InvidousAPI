@@ -2,69 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>iPad Invidious Streamer</title>
+    <title>iPad Legacy Video Engine</title>
     <style>
         body {
-            background-color: #121212;
+            background-color: #0c0d10;
             color: #ffffff;
             font-family: -apple-system, Helvetica, Arial, sans-serif;
             text-align: center;
-            padding: 20px;
+            padding: 15px;
+            margin: 0;
         }
         .container {
-            max-width: 650px;
-            margin: 0 auto;
-            background: #1e1e1e;
-            padding: 25px;
+            max-width: 600px;
+            margin: 10px auto;
+            background: #171921;
+            padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            border: 1px solid #252836;
         }
         h1 {
             color: #f1c40f;
-            font-size: 24px;
+            font-size: 22px;
             margin-bottom: 5px;
         }
-        .subtitle {
-            color: #aaa;
-            font-size: 14px;
-            margin-bottom: 20px;
+        .node-tag {
+            background: #252836;
+            color: #00ff88;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-block;
+            margin-bottom: 15px;
+            font-family: monospace;
         }
         input {
-            width: 85%;
-            padding: 14px;
-            margin-bottom: 15px;
+            width: 90%;
+            padding: 12px;
+            margin-bottom: 12px;
             border-radius: 6px;
-            border: 2px solid #333;
-            background: #2b2b2b;
+            border: 2px solid #252836;
+            background: #1f222f;
             color: #fff;
             font-size: 16px;
-            outline: none;
         }
-        input:focus {
-            border-color: #f1c40f;
+        .btn-group {
+            margin-bottom: 15px;
         }
         button {
-            padding: 12px 28px;
-            background: #f1c40f;
-            color: #111;
+            padding: 12px 20px;
+            margin: 5px;
             border: none;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 15px;
             cursor: pointer;
         }
-        button:hover {
-            background: #d4ac0d;
-        }
+        .btn-play { background: #f1c40f; color: #111; }
+        .btn-skip { background: #e74c3c; color: #fff; }
+        
         .player-frame {
-            margin-top: 25px;
+            margin-top: 15px;
             display: none;
             position: relative;
-            padding-bottom: 56.25%; /* Perfect 16:9 ratio */
+            padding-bottom: 56.25%; /* Fixed 16:9 ratio */
             height: 0;
             overflow: hidden;
             border-radius: 8px;
             background: #000;
+            border: 1px solid #252836;
         }
         .player-frame iframe {
             position: absolute;
@@ -79,43 +85,73 @@
 <body>
 
 <div class="container">
-    <h1>Legacy Hub</h1>
-    <p class="subtitle">Custom structural pipeline utilizing unblocked Invidious mirrors.</p>
+    <h1>iPad Video Pipeline</h1>
+    <div class="node-tag" id="nodeDisplay">Active Hub: inv.nadeko.net</div>
     
-    <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
     <br>
-    <button onclick="streamViaInvidious()">Launch Video</button>
+    <input type="text" id="videoUrl" placeholder="Paste YouTube link here...">
+    
+    <div class="btn-group">
+        <button class="btn-play" onclick="launchVideoStream()">Launch Video</button>
+        <button class="btn-skip" onclick="rotateServerNode()">Skip Broken Server</button>
+    </div>
 
     <div class="player-frame" id="playerWrapper">
         </div>
 </div>
 
 <script>
+    // Global tracking array consisting of resilient open cleared nodes
+    var serverNodes = [
+        "https://inv.nadeko.net",
+        "https://invidious.nerdvpn.de",
+        "https://yewtu.be",
+        "https://invidious.flokinet.to",
+        "https://inv.tux.digital" // Kept as last fallback option
+    ];
+    
+    var activeIndex = 0;
+
+    function updateNodeLabel() {
+        var cleanName = serverNodes[activeIndex].replace("https://", "");
+        document.getElementById("nodeDisplay").innerText = "Active Hub: " + cleanName;
+    }
+
+    function rotateServerNode() {
+        // Step directly to the next index in the tracking matrix
+        activeIndex = (activeIndex + 1) % serverNodes.length;
+        updateNodeLabel();
+        
+        // If a video was already attempting to play, hot-reload it instantly onto the new server node
+        var urlInput = document.getElementById('videoUrl').value.trim();
+        if (urlInput) {
+            launchVideoStream();
+        }
+    }
+
     function extractVideoId(url) {
         var regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         var match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     }
 
-    function streamViaInvidious() {
+    function launchVideoStream() {
         var urlInput = document.getElementById('videoUrl').value.trim();
         var videoId = extractVideoId(urlInput);
         var wrapper = document.getElementById('playerWrapper');
 
         if (!videoId) {
-            alert('Please check your link and try again.');
+            alert('Please check your link layout format.');
             return;
         }
 
-        // We target a highly stable public Invidious instance node
-        var activeInstance = "https://inv.tux.digital";
+        var currentServer = serverNodes[activeIndex];
+        
+        // Structural generation parameters optimized specifically for old Safari rendering 
+        // local=true acts as a bypass forcing the selected server instance to process media tracks natively
+        var targetEmbedUrl = currentServer + "/embed/" + videoId + "?autoplay=1&local=true&player_style=youtube&playsinline=1";
 
-        // Building a clean, legacy-ready tracking-free embed string
-        // &local=true forces the instance to proxy the media so your iPad can read it
-        var targetEmbed = activeInstance + "/embed/" + videoId + "?autoplay=1&local=true&player_style=youtube";
-
-        // Render the window
-        wrapper.innerHTML = '<iframe src="' + targetEmbed + '" allowfullscreen></iframe>';
+        wrapper.innerHTML = '<iframe src="' + targetEmbedUrl + '" allowfullscreen></iframe>';
         wrapper.style.display = 'block';
     }
 </script>
